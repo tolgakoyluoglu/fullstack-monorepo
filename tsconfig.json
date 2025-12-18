@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "target": "ES2020",
+    "jsx": "react-jsx",
+    "strict": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "noEmit": true,
+    "baseUrl": "."
+  },
+  "include": ["eslint.config.js"],
+  "references": [
+    { "path": "./apps/api" },
+    { "path": "./apps/client" },
+    { "path": "./packages/shared" }
+  ]
+}
