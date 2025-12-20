@@ -17,8 +17,16 @@
     "jsx": "react-jsx",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@api/*": ["../api/src/*"],
+      "@shared/*": ["../../packages/shared/src/*"]
     }
   },
-  "include": ["src"]
+  "include": [
+    "src",
+    "../api/src/index.ts",
+    "../api/src/**/*.ts",
+    "../../packages/shared/src/**/*.ts"
+  ],
+  "exclude": ["node_modules"]
 }

@@ -4,6 +4,7 @@ import tseslint from 'typescript-eslint'
 import react from 'eslint-plugin-react'
 import reactHooks from 'eslint-plugin-react-hooks'
 import prettier from 'eslint-plugin-prettier/recommended'
+import reactCompiler from 'eslint-plugin-react-compiler'
 
 export default tseslint.config(
   {
@@ -14,7 +15,6 @@ export default tseslint.config(
       '**/coverage/**',
       '**/build/**',
       '**/*.lock',
-      '**/pnpm-lock.yaml',
       '**/package-lock.json',
       '**/yarn.lock',
       '**/*.min.js',
@@ -52,6 +52,7 @@ export default tseslint.config(
     plugins: {
       react,
       'react-hooks': reactHooks,
+      'react-compiler': reactCompiler,
     },
     languageOptions: {
       globals: {
@@ -63,6 +64,7 @@ export default tseslint.config(
       ...react.configs.flat['jsx-runtime'].rules,
       ...reactHooks.configs.recommended.rules,
       'react/prop-types': 'off',
+      'react-compiler/react-compiler': 'error',
     },
     settings: {
       react: {

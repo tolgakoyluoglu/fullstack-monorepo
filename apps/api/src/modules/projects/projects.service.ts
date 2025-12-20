@@ -1,21 +1,31 @@
 import { projectsRepository } from './projects.repository'
+import { formatTimestamp } from '@api/lib/timestamp'
+import { InternalError } from '@api/lib/errors'
 
 export class ProjectsService {
+  constructor(private readonly repo = projectsRepository) {}
+
   async createProject(userId: string, name: string) {
-    const result = await projectsRepository.createProject(userId, name)
+    const result = await this.repo.createProject(userId, name)
+    if (!result) {
+      throw InternalError('Failed to create project')
+    }
     return {
       ...result,
-      createdAt: result.createdAt.toISOString(),
-      updatedAt: result.updatedAt.toISOString(),
+      createdAt: formatTimestamp(result.createdAt),
+      updatedAt: formatTimestamp(result.updatedAt),
     }
   }
 
   async getProjects(userId: string) {
-    const projects = await projectsRepository.getProjects(userId)
+    const projects = await this.repo.getProjects(userId)
+    if (!projects) {
+      throw InternalError('Failed to get projects')
+    }
     return projects.map((p) => ({
       ...p,
-      createdAt: p.createdAt.toISOString(),
-      updatedAt: p.updatedAt.toISOString(),
+      createdAt: formatTimestamp(p.createdAt),
+      updatedAt: formatTimestamp(p.updatedAt),
     }))
   }
 }

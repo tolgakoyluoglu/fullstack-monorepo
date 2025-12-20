@@ -1,7 +1,8 @@
 import { treaty } from '@elysiajs/eden'
-import type { App } from '../../../api/src/index'
+import type { App } from '@api/index'
+import { config } from './config'
 
-export const api = treaty<App>('http://localhost:3000', {
+export const api = treaty<App>(config.apiUrl, {
   fetch: {
     credentials: 'include',
   },

@@ -1,6 +1,11 @@
-import { drizzle } from 'drizzle-orm/bun-sqlite'
-import { Database } from 'bun:sqlite'
+import { drizzle } from 'drizzle-orm/postgres-js'
+import postgres from 'postgres'
 import * as schema from './schema'
+import { env } from '@api/config/env'
 
-const sqlite = new Database('sqlite.db')
-export const db = drizzle(sqlite, { schema })
+const client = postgres(env.DATABASE_URL, {
+  max: 10,
+  idle_timeout: 20,
+  connect_timeout: 10,
+})
+export const db = drizzle(client, { schema })

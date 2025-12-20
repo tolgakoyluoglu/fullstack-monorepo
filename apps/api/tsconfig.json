@@ -10,9 +10,17 @@
     "noEmit": true,
     "composite": true,
     "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
     "downlevelIteration": true,
     "skipLibCheck": true,
-    "types": ["bun-types"]
+    "types": ["bun-types"],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@api/*": ["./src/*"],
+      "@test/*": ["./test/*"]
+    }
   },
-  "include": ["src", "drizzle.config.ts"]
+  "include": ["src", "test/**/*", "src/types", "drizzle.config.ts"]
 }

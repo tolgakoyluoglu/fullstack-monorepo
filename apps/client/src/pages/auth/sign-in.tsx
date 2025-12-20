@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { typeboxResolver } from '@hookform/resolvers/typebox'
-import { SignInSchema, type SignInType } from '@aeo/shared'
-import { signIn } from '@/lib/auth-client'
+import { SignInSchema, type SignInType } from '@monorepo/shared'
+import { signIn, getSession } from '@/lib/auth-client'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -15,11 +15,12 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Link, useNavigate } from 'react-router-dom'
+import { toast } from 'react-hot-toast'
 
 export default function SignIn() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   const {
     register,
@@ -31,48 +32,47 @@ export default function SignIn() {
 
   const onSubmit = async (data: SignInType) => {
     setLoading(true)
-    setError(null)
-    try {
-      await signIn.email(
-        {
-          email: data.email,
-          password: data.password,
+    setErrorMessage(null)
+
+    await signIn.email(
+      {
+        email: data.email,
+        password: data.password,
+      },
+      {
+        onSuccess: async () => {
+          await getSession()
+          toast.success('Signed in successfully')
+          navigate('/dashboard')
         },
-        {
-          onSuccess: () => {
-            navigate('/dashboard')
-          },
-          onError: (ctx) => {
-            setError(ctx.error.message)
-            setLoading(false)
-          },
-        }
-      )
-    } catch (err) {
-      setLoading(false)
-      if (err instanceof Error) {
-        setError(err.message)
-      } else {
-        setError('An error occurred')
+        onError: (ctx) => {
+          setLoading(false)
+          const message = ctx.error.message?.toLowerCase() ?? 'unknown error'
+          if (
+            message.includes('invalid') ||
+            message.includes('credentials') ||
+            message.includes('not found')
+          ) {
+            return setErrorMessage('Email or password incorrect')
+          }
+          return setErrorMessage('An error occurred')
+        },
       }
-    }
+    )
+    setLoading(false)
   }
 
   const handleGoogleSignIn = async () => {
     setLoading(true)
-    setError(null)
-    try {
-      await signIn.social({
-        provider: 'google',
-        callbackURL: '/dashboard',
-      })
-    } catch (err) {
+    setErrorMessage(null)
+    const { error } = await signIn.social({
+      provider: 'google',
+      callbackURL: `${window.location.origin}/dashboard`,
+    })
+
+    if (error) {
       setLoading(false)
-      if (err instanceof Error) {
-        setError(err.message)
-      } else {
-        setError('An error occurred')
-      }
+      setErrorMessage('Failed to sign in with Google')
     }
   }
 
@@ -123,13 +123,26 @@ export default function SignIn() {
                 {errors.email && <p className="text-sm text-red-500">{errors.email.message}</p>}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Password</Label>
+                  <Link
+                    to="/forgot-password"
+                    className="text-sm font-medium text-primary hover:underline"
+                    tabIndex={-1}
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
                 <Input id="password" type="password" {...register('password')} />
                 {errors.password && (
                   <p className="text-sm text-red-500">{errors.password.message}</p>
                 )}
               </div>
-              {error && <p className="text-sm text-red-500">{error}</p>}
+
+              {errorMessage && (
+                <p className="text-sm text-red-500 text-center font-medium">{errorMessage}</p>
+              )}
+
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? 'Signing in...' : 'Sign In'}
               </Button>
@@ -139,7 +152,7 @@ export default function SignIn() {
         <CardFooter className="flex justify-center">
           <p className="text-sm text-gray-500">
             Don&apos;t have an account?{' '}
-            <Link to="/sign-up" className="text-blue-500 hover:underline">
+            <Link to="/sign-up" className="text-primary hover:underline">
               Sign up
             </Link>
           </p>

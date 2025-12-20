@@ -4,14 +4,28 @@ import { swagger } from '@elysiajs/swagger'
 import { logger } from '@bogeychan/elysia-logger'
 import { helmet } from 'elysia-helmet'
 import { rateLimit } from 'elysia-rate-limit'
-import { errorHandler } from './error-handler'
-import { auth } from './auth'
-import { healthRoute } from '../modules/health/health.route'
-import { projectsRoute } from '../modules/projects/projects.route'
+import { errorHandler } from '@api/middleware/error-handler'
+import { auth } from '@api/config/auth'
+import { createHealthRoute } from '@api/modules/health/health.route'
+import { createProjectsRoute } from '@api/modules/projects/projects.route'
+import { createAdminRoute } from '@api/modules/admin/admin.route'
+import { env } from '@api/config/env'
 
 export function createApp() {
-  return new Elysia()
+  const app = new Elysia()
     .use(
+      cors({
+        origin: [env.CLIENT_URL],
+        credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization'],
+        maxAge: 86400,
+      })
+    )
+    .mount(auth.handler)
+
+  if (env.NODE_ENV === 'development') {
+    app.use(
       swagger({
         documentation: {
           info: {
@@ -21,6 +35,9 @@ export function createApp() {
         },
       })
     )
+  }
+
+  return app
     .use(
       logger({
         level: 'info',
@@ -36,18 +53,13 @@ export function createApp() {
     .use(
       rateLimit({
         duration: 60000,
-        max: 100,
+        max: 60,
       })
     )
-    .use(
-      cors({
-        origin: ['http://localhost:5173', 'http://localhost:5174'],
-        credentials: true,
-      })
-    )
-    .use(healthRoute)
+    .use(createHealthRoute())
     .get('/', () => 'Hello Elysia')
-    .all('/api/auth/*', ({ request }) => auth.handler(request))
     .onError(errorHandler)
-    .group('/api', (app) => app.use(projectsRoute))
+    .group('/api', (app) => app.use(createProjectsRoute()).use(createAdminRoute()))
 }
+
+export type App = ReturnType<typeof createApp>

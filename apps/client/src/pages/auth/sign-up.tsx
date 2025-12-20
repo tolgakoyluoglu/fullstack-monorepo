@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { typeboxResolver } from '@hookform/resolvers/typebox'
-import { SignUpSchema, type SignUpType } from '@aeo/shared'
-import { signUp, signIn } from '@/lib/auth-client'
+import { SignUpSchema, type SignUpType } from '@monorepo/shared'
+import { signUp, signIn, sendVerificationEmail } from '@/lib/auth-client'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -15,11 +15,12 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Link, useNavigate } from 'react-router-dom'
+import { toast } from 'react-hot-toast'
 
 export default function SignUp() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   const {
     register,
@@ -31,49 +32,62 @@ export default function SignUp() {
 
   const onSubmit = async (data: SignUpType) => {
     setLoading(true)
-    setError(null)
-    try {
-      await signUp.email(
-        {
-          email: data.email,
-          password: data.password,
-          name: data.name,
-        },
-        {
-          onSuccess: () => {
-            navigate('/dashboard')
-          },
-          onError: (ctx) => {
-            setError(ctx.error.message)
+    setErrorMessage(null)
+
+    await signUp.email(
+      {
+        email: data.email,
+        password: data.password,
+        name: data.name,
+      },
+      {
+        onSuccess: async () => {
+          await sendVerificationEmail({
+            email: data.email,
+            callbackURL: '/dashboard',
+          })
+
+          const { error: signInError } = await signIn.email({
+            email: data.email,
+            password: data.password,
+          })
+
+          if (signInError) {
             setLoading(false)
-          },
-        }
-      )
-    } catch (err) {
-      setLoading(false)
-      if (err instanceof Error) {
-        setError(err.message)
-      } else {
-        setError('An error occurred')
+            setErrorMessage('Account created, but auto-login failed. Please sign in.')
+            navigate('/sign-in')
+            return
+          }
+
+          toast.success('Account created! Please check your email to verify.')
+          navigate('/dashboard')
+        },
+        onError: (ctx) => {
+          setLoading(false)
+          const message = ctx.error.message?.toLowerCase() ?? 'unknown error'
+          if (message.includes('already') || message.includes('exists')) {
+            setErrorMessage('An account with this email already exists')
+          } else if (message.includes('invalid email')) {
+            setErrorMessage('Please enter a valid email address')
+          } else {
+            setErrorMessage(ctx.error.message || 'An error occurred')
+          }
+        },
       }
-    }
+    )
   }
 
   const handleGoogleSignIn = async () => {
     setLoading(true)
-    setError(null)
-    try {
-      await signIn.social({
-        provider: 'google',
-        callbackURL: '/dashboard',
-      })
-    } catch (err) {
+    setErrorMessage(null)
+    const { error } = await signIn.social({
+      provider: 'google',
+      callbackURL: `${window.location.origin}/dashboard`,
+    })
+
+    if (error) {
       setLoading(false)
-      if (err instanceof Error) {
-        setError(err.message)
-      } else {
-        setError('An error occurred')
-      }
+      setErrorMessage('Failed to sign in with Google')
     }
   }
 
@@ -135,7 +149,11 @@ export default function SignUp() {
                   <p className="text-sm text-red-500">{errors.password.message}</p>
                 )}
               </div>
-              {error && <p className="text-sm text-red-500">{error}</p>}
+
+              {errorMessage && (
+                <p className="text-sm text-red-500 text-center font-medium">{errorMessage}</p>
+              )}
+
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? 'Creating account...' : 'Sign Up'}
               </Button>
@@ -145,7 +163,7 @@ export default function SignUp() {
         <CardFooter className="flex justify-center">
           <p className="text-sm text-gray-500">
             Already have an account?{' '}
-            <Link to="/sign-in" className="text-blue-500 hover:underline">
+            <Link to="/sign-in" className="text-primary hover:underline">
               Sign in
             </Link>
           </p>
